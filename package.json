@@ -1,0 +1,15 @@
+{
+  "name": "solix-report",
+  "version": "1.0.0",
+  "description": "Fetches Anker Solix Wallbox charging sessions and generates an HTML report",
+  "license": "MIT",
+  "author": "Dennis Hering",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  }
+}
