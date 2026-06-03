@@ -74,3 +74,6 @@ lib/
   report.js    — HTML report generator
 index.js       — Entry point
 ```
+
+## License
+LGPL v3 – © Dennis Hering. Modifications must remain open source.

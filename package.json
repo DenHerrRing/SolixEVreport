@@ -1,8 +1,8 @@
 {
-  "name": "solix-report",
+  "name": "solix-ev-report",
   "version": "1.0.0",
-  "description": "Fetches Anker Solix Wallbox charging sessions and generates an HTML report",
-  "license": "MIT",
+  "description": "Fetches EV charging sessions from the Anker Solix Wallbox API and generates an HTML report with session statistics, vehicle assignment, and CO₂ savings.",
+  "license": "LGPL-3.0-or-later",
   "author": "Dennis Hering",
   "type": "module",
   "main": "index.js",
