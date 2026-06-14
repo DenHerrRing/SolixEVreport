@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SolixEVreport</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f3f4f6; color: #111827; min-height: 100vh; }
+
+    header { background: #111827; color: #fff; padding: 1.5rem 2.5rem; display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
+    header h1 { font-size: 1.4rem; font-weight: 600; }
+    .period { font-size: 1rem; color: #9ca3af; }
+    #btn-back { margin-left: auto; background: transparent; border: 1px solid #374151; color: #9ca3af; padding: .4rem .9rem; border-radius: .5rem; cursor: pointer; font-size: .85rem; }
+    #btn-back:hover { border-color: #6b7280; color: #e5e7eb; }
+    .rpt-filters { display: flex; gap: .5rem; align-items: center; margin-left: 1.5rem; }
+    .rpt-filters select {
+      background: #1f2937; color: #e5e7eb; border: 1px solid #374151; border-radius: .4rem;
+      padding: .35rem 1.8rem .35rem .65rem; font-size: .875rem; cursor: pointer;
+      appearance: none; font-family: inherit;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right .55rem center;
+    }
+    .rpt-filters select:focus { outline: none; border-color: #6b7280; }
+    .rpt-filters select:hover { border-color: #4b5563; }
+
+    /* Config */
+    #config-screen { min-height: 100vh; display: flex; flex-direction: column; }
+    .config-body { flex: 1; display: flex; justify-content: center; padding: 2.5rem 1.5rem; }
+    .config-card { background: #fff; border-radius: 1rem; padding: 2rem; width: 100%; max-width: 480px; box-shadow: 0 1px 3px rgba(0,0,0,.08); align-self: flex-start; }
+    .config-card h2 { font-size: 1rem; font-weight: 600; color: #374151; margin-bottom: 1.5rem; }
+    .field { display: flex; flex-direction: column; gap: .35rem; margin-bottom: 1rem; }
+    .field label { font-size: .78rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; }
+    .field input, .field select, .field textarea {
+      padding: .6rem .85rem; border: 1px solid #d1d5db; border-radius: .5rem;
+      font-size: .9rem; font-family: inherit; color: #111827; background: #fff;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: #111827; }
+    .field select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right .75rem center; padding-right: 2.25rem; cursor: pointer; }
+    .field textarea { resize: vertical; min-height: 64px; font-family: monospace; font-size: .8rem; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .submit-btn { width: 100%; margin-top: .5rem; padding: .75rem; background: #111827; color: #fff; border: none; border-radius: .5rem; font-size: .95rem; font-weight: 600; cursor: pointer; }
+    .submit-btn:hover:not(:disabled) { background: #1f2937; }
+    .submit-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+    .note { margin-top: 1rem; font-size: .75rem; color: #9ca3af; text-align: center; }
+    .error-banner { background: #fef2f2; border: 1px solid #fecaca; border-radius: .5rem; padding: .85rem 1rem; margin-top: 1rem; font-size: .85rem; color: #dc2626; display: none; white-space: pre-wrap; }
+
+    /* Loading */
+    #loading-screen { display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 1.25rem; }
+    .spinner { width: 40px; height: 40px; border: 3px solid #e5e7eb; border-top-color: #111827; border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading-status { font-size: .9rem; color: #6b7280; }
+
+    /* Report */
+    #report-screen { display: none; }
+    main { max-width: 1100px; margin: 2rem auto; padding: 0 1.5rem; display: grid; gap: 2rem; }
+    section > h2 { font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: #6b7280; margin-bottom: .75rem; }
+    .cards { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .card { background: #fff; border-radius: .75rem; padding: 1.25rem 1.5rem; flex: 1; min-width: 160px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .card-label { font-size: .75rem; color: #6b7280; margin-bottom: .35rem; }
+    .card-value { font-size: 1.6rem; font-weight: 700; }
+    .card-sub { font-size: .8rem; color: #6b7280; margin-top: .25rem; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: .75rem; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    thead { background: #f9fafb; }
+    th { padding: .75rem 1rem; text-align: left; font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #6b7280; }
+    td { padding: .75rem 1rem; font-size: .875rem; border-top: 1px solid #f3f4f6; }
+    tr:hover td { background: #f9fafb; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .badge { display: inline-block; padding: .15rem .5rem; border-radius: .35rem; font-size: .7rem; font-weight: 600; background: #f3f4f6; color: #6b7280; }
+    .badge.pv { background: #dcfce7; color: #16a34a; }
+    .muted { color: #9ca3af; }
+    footer { margin-top: 1rem; padding: 1.5rem 2.5rem; border-top: 1px solid #e5e7eb; font-size: .75rem; color: #9ca3af; display: flex; flex-wrap: wrap; gap: .5rem 2rem; }
+    footer strong { color: #6b7280; }
+  </style>
+</head>
+<body>
+
+<!-- CONFIG -->
+<div id="config-screen">
+  <header><h1>SolixEVreport</h1><span class="period">Anmeldung</span></header>
+  <div class="config-body">
+    <div class="config-card">
+      <h2>Zugangsdaten &amp; Filter</h2>
+      <form id="cfg-form">
+        <div class="field"><label>E-Mail</label><input type="email" id="cfg-email" required autocomplete="email"></div>
+        <div class="field"><label>Passwort</label><input type="password" id="cfg-password" required autocomplete="current-password"></div>
+        <div class="field"><label>Land-Code</label><input type="text" id="cfg-country" value="DE" maxlength="3" style="text-transform:uppercase" required></div>
+        <div class="row">
+          <div class="field"><label>Jahr</label><select id="cfg-year"></select></div>
+          <div class="field"><label>Monat</label>
+            <select id="cfg-month">
+              <option value="">Ganzes Jahr</option>
+              <option value="1">Januar</option>
+              <option value="2">Februar</option>
+              <option value="3">März</option>
+              <option value="4">April</option>
+              <option value="5">Mai</option>
+              <option value="6">Juni</option>
+              <option value="7">Juli</option>
+              <option value="8">August</option>
+              <option value="9">September</option>
+              <option value="10">Oktober</option>
+              <option value="11">November</option>
+              <option value="12">Dezember</option>
+            </select>
+          </div>
+        </div>
+        <div class="field"><label>Geräte — Seriennummer:Name, ...</label>
+          <textarea id="cfg-devices" required placeholder="AT2DXXXXXXXXXXXXX:Haus,AT2DXXXXXXXXXXXXX:Garage"></textarea>
+        </div>
+        <div id="cfg-error" class="error-banner"></div>
+        <button type="submit" class="submit-btn" id="cfg-btn">Daten abrufen</button>
+      </form>
+      <p class="note">Passwort wird nicht gespeichert · E-Mail &amp; Einstellungen bleiben in localStorage</p>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <p id="loading-status">Verbinde…</p>
+</div>
+
+<!-- REPORT -->
+<div id="report-screen">
+  <header>
+    <h1>SolixEVreport Ladebericht</h1>
+    <div class="rpt-filters">
+      <select id="rpt-year"></select>
+      <select id="rpt-month">
+        <option value="">Ganzes Jahr</option>
+        <option value="1">Januar</option>
+        <option value="2">Februar</option>
+        <option value="3">März</option>
+        <option value="4">April</option>
+        <option value="5">Mai</option>
+        <option value="6">Juni</option>
+        <option value="7">Juli</option>
+        <option value="8">August</option>
+        <option value="9">September</option>
+        <option value="10">Oktober</option>
+        <option value="11">November</option>
+        <option value="12">Dezember</option>
+      </select>
+      <select id="rpt-ev"><option value="">Alle Fahrzeuge</option></select>
+    </div>
+    <button id="btn-back">↩ Einstellungen</button>
+  </header>
+  <main>
+    <section><h2>Gesamt</h2><div id="rpt-summary" class="cards"></div></section>
+    <section><h2>Nach Fahrzeug</h2><div id="rpt-vehicles" class="cards"></div></section>
+    <section>
+      <h2>Ladesessions</h2>
+      <table>
+        <thead><tr>
+          <th class="num">TX-ID</th><th>Start</th><th>Ende</th><th>Fahrzeug</th>
+          <th>Wallbox</th><th>Quelle</th><th class="num">Energie</th><th class="num">Dauer</th><th class="num">Kosten</th>
+        </tr></thead>
+        <tbody id="rpt-sessions"></tbody>
+      </table>
+    </section>
+  </main>
+  <footer id="rpt-footer"></footer>
+</div>
+
+<script>
+// ── Utilities ──────────────────────────────────────────────────────────────
+const ESC_MAP = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ESC_MAP[c]); }
+
+function hexToBytes(hex) {
+  const a = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < a.length; i++) a[i] = parseInt(hex.slice(i*2, i*2+2), 16);
+  return a;
+}
+function bufToHex(buf) {
+  return Array.from(new Uint8Array(buf), b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ── MD5 (for gtoken = md5(user_id)) ────────────────────────────────────────
+function md5(str) {
+  const bytes = new TextEncoder().encode(str);
+  const n = bytes.length;
+  const nw = Math.ceil((n + 9) / 64) * 16;
+  const w = new Int32Array(nw);
+  for (let i = 0; i < n; i++) w[i>>2] |= bytes[i] << ((i&3)*8);
+  w[n>>2] |= 0x80 << ((n&3)*8);
+  w[nw-2] = n * 8;
+
+  const K = [
+    0xd76aa478,0xe8c7b756,0x242070db,0xc1bdceee,0xf57c0faf,0x4787c62a,0xa8304613,0xfd469501,
+    0x698098d8,0x8b44f7af,0xffff5bb1,0x895cd7be,0x6b901122,0xfd987193,0xa679438e,0x49b40821,
+    0xf61e2562,0xc040b340,0x265e5a51,0xe9b6c7aa,0xd62f105d,0x02441453,0xd8a1e681,0xe7d3fbc8,
+    0x21e1cde6,0xc33707d6,0xf4d50d87,0x455a14ed,0xa9e3e905,0xfcefa3f8,0x676f02d9,0x8d2a4c8a,
+    0xfffa3942,0x8771f681,0x6d9d6122,0xfde5380c,0xa4beea44,0x4bdecfa9,0xf6bb4b60,0xbebfbc70,
+    0x289b7ec6,0xeaa127fa,0xd4ef3085,0x04881d05,0xd9d4d039,0xe6db99e5,0x1fa27cf8,0xc4ac5665,
+    0xf4292244,0x432aff97,0xab9423a7,0xfc93a039,0x655b59c3,0x8f0ccc92,0xffeff47d,0x85845dd1,
+    0x6fa87e4f,0xfe2ce6e0,0xa3014314,0x4e0811a1,0xf7537e82,0xbd3af235,0x2ad7d2bb,0xeb86d391,
+  ];
+  const S = [7,12,17,22,7,12,17,22,7,12,17,22,7,12,17,22,
+             5,9,14,20,5,9,14,20,5,9,14,20,5,9,14,20,
+             4,11,16,23,4,11,16,23,4,11,16,23,4,11,16,23,
+             6,10,15,21,6,10,15,21,6,10,15,21,6,10,15,21];
+
+  let h0=0x67452301, h1=0xefcdab89, h2=0x98badcfe, h3=0x10325476;
+  for (let i = 0; i < nw; i += 16) {
+    let a=h0, b=h1, c=h2, d=h3;
+    for (let j = 0; j < 64; j++) {
+      let f, g;
+      if      (j<16) { f=(b&c)|(~b&d); g=j; }
+      else if (j<32) { f=(d&b)|(~d&c); g=(5*j+1)%16; }
+      else if (j<48) { f=b^c^d;        g=(3*j+5)%16; }
+      else           { f=c^(b|~d);     g=(7*j)%16; }
+      f=(f+a+K[j]+w[i+g])|0;
+      a=d; d=c; c=b;
+      b=(b+((f<<S[j])|(f>>>(32-S[j]))))|0;
+    }
+    h0=(h0+a)|0; h1=(h1+b)|0; h2=(h2+c)|0; h3=(h3+d)|0;
+  }
+  const le = v => [0,8,16,24].map(s=>((v>>s)&0xff).toString(16).padStart(2,'0')).join('');
+  return le(h0)+le(h1)+le(h2)+le(h3);
+}
+
+// ── API ────────────────────────────────────────────────────────────────────
+const EU = new Set(['DE','AT','CH','FR','NL','BE','IT','ES','PL','SE','NO','DK','FI','GB']);
+const SERVER_PUB = '04c5c00c4f8d1197cc7c3167c52bf7acb054d722f0ef08dcd7e0883236e0d72a3868d9750cb47fa4619248f3d83f0f662671dadc6e2d31c2f41db0161651c7c076';
+
+let COUNTRY = 'DE';
+
+function apiBase() {
+  // Wenn lokal über server.js geöffnet → Proxy nutzen (umgeht CORS)
+  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    return `${location.origin}/proxy`;
+  }
+  return EU.has(COUNTRY) ? 'https://ankerpower-api-eu.anker.com' : 'https://ankerpower-api.anker.com';
+}
+
+async function apiPost(path, body, auth = null) {
+  const headers = {
+    'content-type': 'application/json',
+    'model-type':   'DESKTOP',
+    'app-name':     'anker_power',
+    'os-type':      'android',
+    'country':      COUNTRY,
+  };
+  if (auth) { headers['x-auth-token'] = auth.token; headers['gtoken'] = auth.gtoken; }
+  const res = await fetch(`${apiBase()}/${path}`, {
+    method: 'POST', headers, body: JSON.stringify(body),
+  });
+  if (!res.ok) { const t = await res.text().catch(()=>''); throw new Error(`HTTP ${res.status} → ${path}\n${t}`); }
+  const json = await res.json();
+  if (json.code !== 0) throw new Error(`API [${json.code}]: ${json.msg ?? 'Fehler'}`);
+  return json.data;
+}
+
+// ── Auth ───────────────────────────────────────────────────────────────────
+async function doLogin(email, password) {
+  const kp = await crypto.subtle.generateKey({ name:'ECDH', namedCurve:'P-256' }, true, ['deriveBits']);
+  const clientPubHex = bufToHex(await crypto.subtle.exportKey('raw', kp.publicKey));
+
+  const serverKey = await crypto.subtle.importKey(
+    'raw', hexToBytes(SERVER_PUB), { name:'ECDH', namedCurve:'P-256' }, false, []
+  );
+  const shared = new Uint8Array(await crypto.subtle.deriveBits({ name:'ECDH', public:serverKey }, kp.privateKey, 256));
+
+  const aesKey = await crypto.subtle.importKey('raw', shared, { name:'AES-CBC' }, false, ['encrypt']);
+  const encBuf  = await crypto.subtle.encrypt({ name:'AES-CBC', iv: shared.slice(0,16) }, aesKey, new TextEncoder().encode(password));
+  const encPw   = btoa(String.fromCharCode(...new Uint8Array(encBuf)));
+
+  const data = await apiPost('passport/login', {
+    ab: COUNTRY,
+    client_secret_info: { public_key: clientPubHex },
+    enc: 0, email, password: encPw,
+    time_zone:   -new Date().getTimezoneOffset() * 60_000,
+    transaction: String(Date.now()),
+  });
+  return { token: data.auth_token, gtoken: md5(data.user_id) };
+}
+
+// ── Sessions ───────────────────────────────────────────────────────────────
+function dateRange(year, month) {
+  const pad = n => String(n).padStart(2,'0');
+  if (year && month) {
+    const last = new Date(year, month, 0).getDate();
+    return { dateType:'month', startDate:`${year}-${pad(month)}-01`, endDate:`${year}-${pad(month)}-${last}` };
+  }
+  if (year) return { dateType:'year', startDate:`${year}-01-01`, endDate:`${year}-12-31` };
+  return { dateType:'year', startDate:'', endDate:'' };
+}
+
+async function fetchSessions(auth, sn, year, month) {
+  const { dateType, startDate, endDate } = dateRange(year, month);
+  const PAGE = 50;
+  const all = [];
+  let page = 0;
+  while (true) {
+    const r = await apiPost('power_service/v1/app/order/get_charge_order_stats_list', {
+      device_sn: sn, order_status: 0, date_type: dateType,
+      start_date: startDate, end_date: endDate, page, page_size: PAGE,
+    }, auth);
+    const list = r.order_list ?? [];
+    all.push(...list);
+    if (all.length >= (r.total ?? 0) || list.length < PAGE) break;
+    page++;
+  }
+  const details = await Promise.all(
+    all.map(s => apiPost('power_service/v1/app/order/get_charging_order_detail',
+      { device_sn: sn, order_id: s.order_id }, auth).catch(() => null))
+  );
+  return all.map((s, i) => ({
+    ...s,
+    vehicle_name: details[i]?.charge_vehicle_info?.vehicle_name ?? null,
+    co2_saving:   details[i]?.co2_saving ?? 0,
+  }));
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function fmtDT(unix, tz = 'Europe/Berlin') {
+  return new Date(unix * 1000).toLocaleString('de-DE', {
+    timeZone: tz, day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit',
+  });
+}
+function fmtDur(sec) {
+  const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60);
+  return h > 0 ? `${h}h ${m}min` : `${m}min`;
+}
+
+function renderReport(sessions, deviceLabels, year, month, fetchedAt) {
+  const totKwh  = sessions.reduce((s,x) => s+(x.charge_total??0), 0);
+  const totCost = sessions.reduce((s,x) => s+(x.cost??0), 0);
+  const totCo2  = sessions.reduce((s,x) => s+(x.co2_saving??0), 0);
+  document.getElementById('rpt-summary').innerHTML = `
+    <div class="card"><div class="card-label">Sessions</div><div class="card-value">${sessions.length}</div></div>
+    <div class="card"><div class="card-label">Energie</div><div class="card-value">${totKwh.toFixed(2)} kWh</div></div>
+    <div class="card"><div class="card-label">Kosten</div><div class="card-value">${totCost.toFixed(2)} €</div></div>
+    <div class="card"><div class="card-label">CO₂ gespart</div><div class="card-value">${totCo2.toFixed(1)} kg</div></div>`;
+
+  const byV = {};
+  for (const s of sessions) {
+    const name = s.vehicle_name ?? 'Unbekannt';
+    if (!byV[name]) byV[name] = { count:0, kwh:0, cost:0 };
+    byV[name].count++; byV[name].kwh += s.charge_total??0; byV[name].cost += s.cost??0;
+  }
+  document.getElementById('rpt-vehicles').innerHTML = Object.entries(byV).map(([name, v]) => `
+    <div class="card">
+      <div class="card-label">${esc(name)}</div>
+      <div class="card-value">${v.kwh.toFixed(2)} kWh</div>
+      <div class="card-sub">${v.count} Sessions · ${v.cost.toFixed(2)} €</div>
+    </div>`).join('');
+
+  document.getElementById('rpt-sessions').innerHTML = [...sessions]
+    .sort((a,b) => b.start_time - a.start_time)
+    .map(s => {
+      const pv = (s.charge_from_solar??0) > 0 ? `<span class="badge pv">PV</span>` : `<span class="badge">Netz</span>`;
+      return `<tr>
+        <td class="num muted">${esc(s.transaction_id??'–')}</td>
+        <td>${fmtDT(s.start_time, s.time_zone)}</td>
+        <td>${fmtDT(s.end_time, s.time_zone)}</td>
+        <td>${esc(s.vehicle_name??'–')}</td>
+        <td>${esc(deviceLabels[s.device_sn]??s.device_sn??'–')}</td>
+        <td>${pv}</td>
+        <td class="num">${(s.charge_total??0).toFixed(2)} kWh</td>
+        <td class="num">${fmtDur(s.charge_time??0)}</td>
+        <td class="num">${(s.cost??0).toFixed(2)} €</td>
+      </tr>`;
+    }).join('');
+
+  const fmt = d => d?.toLocaleString('de-DE', {
+    day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit',
+  }) ?? '–';
+  const sns = Object.keys(deviceLabels);
+  document.getElementById('rpt-footer').innerHTML = `
+    <span><strong>Bericht erstellt:</strong> ${fmt(new Date())}</span>
+    <span><strong>Daten abgerufen:</strong> ${fmt(fetchedAt)}</span>
+    <span><strong>Geräte:</strong> ${sns.map(sn=>`${esc(deviceLabels[sn])} (${esc(sn)})`).join(' · ')||'–'}</span>`;
+}
+
+// ── Session state (für Re-Load aus dem Report) ─────────────────────────────
+let SESSION_AUTH          = null;
+let SESSION_DEVICE_LABELS = {};
+let SESSION_SNS           = [];
+let SESSION_ALL_SESSIONS  = [];
+let SESSION_FETCHED_AT    = null;
+
+// ── UI helpers ─────────────────────────────────────────────────────────────
+function show(id, displayVal = 'block') {
+  document.getElementById(id).style.display = displayVal;
+}
+function hide(id) { document.getElementById(id).style.display = 'none'; }
+
+function showConfig() {
+  show('config-screen', 'flex'); hide('loading-screen'); hide('report-screen');
+}
+function showLoading(msg) {
+  hide('config-screen'); show('loading-screen', 'flex'); hide('report-screen');
+  document.getElementById('loading-status').textContent = msg;
+}
+function showReport() {
+  hide('config-screen'); hide('loading-screen'); show('report-screen');
+}
+function setStatus(msg) { document.getElementById('loading-status').textContent = msg; }
+
+const LS = {
+  get: k => localStorage.getItem('anker_' + k) ?? '',
+  set: (k, v) => localStorage.setItem('anker_' + k, String(v)),
+};
+
+// ── EV-Dropdown befüllen ───────────────────────────────────────────────────
+function populateEvFilter(sessions) {
+  const sel = document.getElementById('rpt-ev');
+  const prev = sel.value;
+  sel.innerHTML = '';
+  const allOpt = document.createElement('option');
+  allOpt.value = ''; allOpt.textContent = 'Alle Fahrzeuge';
+  sel.appendChild(allOpt);
+  const names = [...new Set(sessions.map(s => s.vehicle_name).filter(Boolean))].sort();
+  for (const name of names) {
+    const opt = document.createElement('option');
+    opt.value = name; opt.textContent = name;
+    sel.appendChild(opt);
+  }
+  // Vorherige Auswahl behalten wenn noch vorhanden
+  if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+}
+
+// ── Gefilterte Sessions rendern (kein API-Call) ────────────────────────────
+function applyFilters() {
+  const ev = document.getElementById('rpt-ev').value;
+  const year  = parseInt(document.getElementById('rpt-year').value)  || null;
+  const month = parseInt(document.getElementById('rpt-month').value) || null;
+  const filtered = ev
+    ? SESSION_ALL_SESSIONS.filter(s => s.vehicle_name === ev)
+    : SESSION_ALL_SESSIONS;
+  renderReport(filtered, SESSION_DEVICE_LABELS, year, month, SESSION_FETCHED_AT);
+}
+
+// ── Daten laden & Report anzeigen ──────────────────────────────────────────
+async function loadReport(year, month) {
+  LS.set('year', year ?? ''); LS.set('month', month ?? '');
+  showLoading('→ Sessions werden geladen…');
+  try {
+    const all = [];
+    SESSION_FETCHED_AT = new Date();
+    for (let i = 0; i < SESSION_SNS.length; i++) {
+      const sn = SESSION_SNS[i];
+      setStatus(`→ Sessions: ${SESSION_DEVICE_LABELS[sn]} (${i+1}/${SESSION_SNS.length})…`);
+      const sessions = await fetchSessions(SESSION_AUTH, sn, year, month);
+      all.push(...sessions);
+    }
+    SESSION_ALL_SESSIONS = all;
+    setStatus(`${all.length} Sessions geladen…`);
+    document.getElementById('rpt-year').value  = year  ?? new Date().getFullYear();
+    document.getElementById('rpt-month').value = month ?? '';
+    populateEvFilter(all);
+    applyFilters();
+    showReport();
+  } catch (err) {
+    showConfig();
+    const errEl = document.getElementById('cfg-error');
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+  }
+}
+
+// ── Kern-Login-Logik (direkt aufrufbar, unabhängig vom Formular) ───────────
+async function startSession(email, password, country, devices, year, month) {
+  const errEl = document.getElementById('cfg-error');
+  const btn   = document.getElementById('cfg-btn');
+  errEl.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Verbinde…';
+
+  LS.set('email', email); LS.set('country', country); LS.set('devices', devices);
+
+  const deviceLabels = Object.fromEntries(
+    devices.split(',').map(s => s.trim()).filter(Boolean).map(p => p.split(':'))
+  );
+  const sns = Object.keys(deviceLabels);
+
+  if (!sns.length) {
+    errEl.textContent = 'Bitte mindestens ein Gerät im Format SN:Label angeben.';
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Daten abrufen';
+    return;
+  }
+
+  COUNTRY = country;
+
+  try {
+    showLoading('→ Login…');
+    const auth = await doLogin(email, password);
+    SESSION_AUTH          = auth;
+    SESSION_DEVICE_LABELS = deviceLabels;
+    SESSION_SNS           = sns;
+    await loadReport(year, month);
+  } catch (err) {
+    showConfig();
+    const cors = err.message.includes('Failed to fetch') || err.message.includes('NetworkError');
+    errEl.textContent = cors
+      ? 'Netzwerkfehler. Starte den lokalen Server:\n\n  node server.js\n\nDer Browser öffnet sich dann automatisch.'
+      : err.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Daten abrufen';
+  }
+}
+
+// ── Form submit ────────────────────────────────────────────────────────────
+document.getElementById('cfg-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  await startSession(
+    document.getElementById('cfg-email').value.trim(),
+    document.getElementById('cfg-password').value,
+    document.getElementById('cfg-country').value.trim().toUpperCase() || 'DE',
+    document.getElementById('cfg-devices').value.trim(),
+    parseInt(document.getElementById('cfg-year').value)  || null,
+    parseInt(document.getElementById('cfg-month').value) || null,
+  );
+});
+
+// ── Report-Filter ──────────────────────────────────────────────────────────
+function onRptDateChange() {
+  const year  = parseInt(document.getElementById('rpt-year').value)  || null;
+  const month = parseInt(document.getElementById('rpt-month').value) || null;
+  loadReport(year, month); // neuer API-Call nötig
+}
+document.getElementById('rpt-year').addEventListener('change',  onRptDateChange);
+document.getElementById('rpt-month').addEventListener('change', onRptDateChange);
+document.getElementById('rpt-ev').addEventListener('change', applyFilters); // nur neu rendern
+
+document.getElementById('btn-back').addEventListener('click', showConfig);
+
+// ── Init ───────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  // Jahr-Dropdowns befüllen (2020 → aktuelles Jahr), neuestes zuerst
+  const curYear = new Date().getFullYear();
+  for (const selId of ['cfg-year', 'rpt-year']) {
+    const sel = document.getElementById(selId);
+    for (let y = curYear; y >= 2020; y--) {
+      const opt = document.createElement('option');
+      opt.value = y; opt.textContent = y;
+      sel.appendChild(opt);
+    }
+  }
+
+  // Versuche Konfiguration vom Server zu laden (.env)
+  let serverCfg = null;
+  try {
+    const res = await fetch('/config');
+    if (res.ok) serverCfg = await res.json();
+  } catch { /* file://-Aufruf oder Server nicht erreichbar */ }
+
+  if (serverCfg) {
+    // Formular mit Server-Werten vorausfüllen (sichtbar falls Auto-Start fehlschlägt)
+    document.getElementById('cfg-email').value    = serverCfg.email;
+    document.getElementById('cfg-country').value  = serverCfg.country || 'DE';
+    document.getElementById('cfg-devices').value  = serverCfg.deviceLabels;
+    document.getElementById('cfg-year').value     = serverCfg.year   || curYear;
+    document.getElementById('cfg-month').value    = serverCfg.month  || '';
+
+    // Passwort direkt übergeben – kein requestSubmit(), da Browser
+    // programmatisch gesetzte Passwortfelder beim Submit aus Sicherheitsgründen leeren können
+    if (serverCfg.email && serverCfg.password && serverCfg.deviceLabels) {
+      await startSession(
+        serverCfg.email,
+        serverCfg.password,
+        serverCfg.country || 'DE',
+        serverCfg.deviceLabels,
+        parseInt(serverCfg.year)  || null,
+        parseInt(serverCfg.month) || null,
+      );
+      return;
+    }
+  } else {
+    // Fallback: localStorage
+    document.getElementById('cfg-email').value   = LS.get('email');
+    document.getElementById('cfg-country').value = LS.get('country') || 'DE';
+    document.getElementById('cfg-devices').value = LS.get('devices');
+    document.getElementById('cfg-year').value    = LS.get('year') || curYear;
+    document.getElementById('cfg-month').value   = LS.get('month');
+  }
+
+  if (document.getElementById('cfg-email').value) document.getElementById('cfg-password').focus();
+  else document.getElementById('cfg-email').focus();
+});
+</script>
+</body>
+</html>
