@@ -1,6 +1,7 @@
 services:
   solix:
-    build: .
+    image: ghcr.io/denherrring/solixevreport:latest
+    # build: .   # lokal bauen statt Image pullen
     ports:
       - "3000:3000"
     env_file:
