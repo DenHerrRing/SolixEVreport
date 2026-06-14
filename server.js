@@ -86,7 +86,9 @@ const server = createServer(async (req, res) => {
 server.listen(PORT, () => {
   const url = `http://localhost:${PORT}`;
   console.log(`SolixEVreport → ${url}`);
-  if (process.platform === 'darwin')     execFile('open',     [url]);
-  else if (process.platform === 'win32') execFile('cmd',      ['/c', 'start', url]);
-  else                                   execFile('xdg-open', [url]);
+  // Browser öffnen – Fehler ignorieren (kein Display in Docker/CI)
+  const noop = () => {};
+  if (process.platform === 'darwin')     execFile('open',     [url], noop);
+  else if (process.platform === 'win32') execFile('cmd',      ['/c', 'start', url], noop);
+  else                                   execFile('xdg-open', [url], noop);
 });
