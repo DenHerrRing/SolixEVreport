@@ -544,9 +544,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Versuche Konfiguration vom Server zu laden (.env)
+  // Das Token wird vom server.js pro Start generiert und in diese Seite eingebettet
   let serverCfg = null;
   try {
-    const res = await fetch('/config');
+    const token = window.__CFG_TOKEN__ ?? '';
+    const res = await fetch('/config', {
+      headers: token ? { 'x-config-token': token } : {},
+    });
     if (res.ok) serverCfg = await res.json();
   } catch { /* file://-Aufruf oder Server nicht erreichbar */ }
 
